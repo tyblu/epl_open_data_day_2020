@@ -102,6 +102,8 @@ library(tidyverse)
 - Pilot project started in 2012
 - 6 solar panels installed at different angles
 - Data collected until August 2014 available [here](https://data.edmonton.ca/Environmental-Services/Historical-City-of-Edmonton-NAIT-Solar-Panel-Refer/uwuq-3zq3)
+- Data file is too big for GitHub
+    - Download from the open data catalogue as a CSV and save to _same directory_
 
 ### Question: How does power depend on the date/time?
 
