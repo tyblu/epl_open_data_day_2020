@@ -1,0 +1,59 @@
+---
+title: "Mosquito Traps and Rainfall in YEG"
+author: "Alexander Ondrus"
+date: "3/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading & Manipulating Data
+
+The two CSV files that we need for this example are the Rainfall Gauge Results and the Mosquitoes Trap Data. I also load the `tidyverse` library as well.
+
+```{r Load libraries and data, message=FALSE, warning=FALSE}
+library(tidyverse)
+mosquito <- read_csv("Mosquitoes_Trap_Data__May_2011_to_Sep_2015_.csv")
+rain <- read_csv("Rainfall_Gauge_Results.csv")
+```
+
+Note that the mosquito data is _weekly_ and the rainfall data is _daily_. That means that I need to aggregate the rainfall data to the same frequency as the mosquito data and then join the two data frames together. Neither date column is immediately recognized as a date, so I use the `lubridate` package to set the format.
+
+```{r Convert to date, message=FALSE, warning=FALSE}
+library(lubridate)
+mosquito$TRAP_DATE <- mdy(mosquito$TRAP_DATE)
+rain$DATE <- mdy(rain$DATE)
+```
+
+The `lubridate` package also has a `week()` function that returns the week of the year for a given date. I will add these columns to both the mosquito and rain data. I also rename the `YEAR` column in the rain data to `Year` to match up with the mosquito data later on.
+
+```{r Add weeks and years}
+mosquito$Year <- year(mosquito$TRAP_DATE)
+mosquito$Week <- week(mosquito$TRAP_DATE)
+
+rain$Week <- week(rain$DATE)
+rain <- rename(rain, Year = YEAR)
+```
+
+To simplify things greatly, I am just going to look at the total rainfall for each week and the total number of mosquitos caught each week. This means that I only need the year, week, and total columns for each data set. Note that the data is spread over multiple rows for each set, so I will need to group and summarise the data as well. To make these commands concise, I will use the pipe operator ` %>% `
+
+```{r Select-group-summarise data}
+mosquitoes_per_week <- select(mosquito, Year, Week, TOTAL) %>% 
+  group_by(Year, Week) %>% 
+  summarise(Total_Mosquitoes = sum(TOTAL, na.rm = TRUE)) %>% 
+  filter(!is.na(Year), !is.na(Week))
+
+rain_per_week <- select(rain, Year, Week, AMOUNT) %>% 
+  group_by(Year, Week) %>% 
+  summarise(Total_Rain = sum(AMOUNT, na.rm = TRUE)) %>% 
+  filter(!is.na(Year), !is.na(Week))
+```
+
+Now the two data sets are on the same frequency, I can merge them using an _inner join_. This means that I only include rows that have matching values in both data frames for the specified columns.
+
+```{r Join the data sets}
+mosquitoes_w_rain <- inner_join(mosquitoes_per_week, rain_per_week, by = c("Year", "Week"))
+```
+

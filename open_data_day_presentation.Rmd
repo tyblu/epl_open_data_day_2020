@@ -71,6 +71,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## YEG Schools Example
 
+
 - When the .Rmd file is knit, the HTML is produced
 - Before knitting will work, need to:
     - Install packages (warning comes up automatically)
@@ -120,3 +121,27 @@ library(tidyverse)
 ### Question: How well does mean rainfall predict total mosquitoes caught?
 
 - Open `mosquitoes_eg.Rmd`
+
+## References: Data Wrangling
+
+![Programming Skills for Data Science](Programming_Skills_Cover.jpg)
+
+- _Programming Skills for Data Science: Start Writing Code to Wrangle, Analyze, and Visualize Data with R_ by **Michael Freeman and Jeol Ross**
+
+## References: Data Visualization
+
+![Data Visualization](Data_Visualization_Cover.jpg)
+
+- _Data Visualization: A Practical Introduction_ by **Kieran Healy**
+
+## References: Data Visualization
+
+![R Graphics Cookbook](R_Graphics_Cookbook.jpg)
+
+- _R Graphics Cookbook: Practical Recipies for Visualizing Data_ by **Winston Chang**
+
+## References: Statistical Learning
+
+![Statistical Learning](Statistical_Learning.jpg)
+
+- _An Introduction to Statistical Learning: with Applications in R_ by **Gareth James, Daniela Witten, et al.**
