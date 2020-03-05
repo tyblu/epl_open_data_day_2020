@@ -1,0 +1,124 @@
+---
+title: "Solar Panels at NAIT"
+author: "Alexander Ondrus"
+date: "04/03/2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading the Data
+
+First, I load the `tidyverse` library and read the downloaded CSV file using the `read_csv()` command. As long as the csv is stored in the same directory as this file, you can use tab-autocomplete to find the file quickly.
+
+The notation `<-` to store the result of a command in another variable can be used interchangably with `=`.
+
+```{r Load file, message=FALSE, warning=FALSE}
+library(tidyverse)
+solar <- read_csv("Historical_-_City_of_Edmonton_NAIT_Solar_Panel_Reference_System.csv")
+```
+
+Data is stored internally as a _data frame_. Click on the view icon on the right side of the 'Environment' pane to see the first few rows. Note that R automatically recognized the date column as dates and the time column as times, and so we can perform calculations on them and integrate the results in the text. 
+
+To access columns in a data frame we use the `$` notation, and we can perform functions such as `max()`, `min()`, `mean()`, etc. on the column in a single command.
+
+```{r Find earliest and latest dates}
+min_date <- min(solar$DATE)
+max_date <- max(solar$DATE)
+```
+
+To use these results integrated into the text, we use single tic-marks as follows; the data begins on `r min_date` and ends on `r max_date`. When we knit the document the variable names are replaced by the results of the calculations. This is useful when generating reports that have external data references. The text then automatically updates with the data source.
+
+## Data Wrangling - Combining, Selecting, Pivoting, Filtering, Aggregating
+
+### Combining
+
+Notice that the date and time is currently contained in two separate columns. The `lubridate` package contains tools to easily combine our date and time columns into a single 'date-time' object, which we can then use for our x-axis in a plot later on.
+
+To add the two together using `lubridate`, I literally add the two columns (first using the functions `ymd()` and `hms()` to have the two columns recognized as year-month-day and hour-minute-second, respectively) 
+
+```{r Combining Date and Time, message=FALSE, warning=FALSE}
+library(lubridate)
+solar$DATE_TIME <- ymd(solar$DATE) + hms(solar$TIME)
+```
+
+### Selecting
+
+For simplicity, I am going to look at only the columns that deal with power. I can pick out specific columns using the `select()` function. Note that all of the columns that I am interested in (excluding the `DATE_TIME` column) end in `POWER`.  The `tidyselect` package (part of the `tidyverse` that we already loaded) has convenient function for just this occasion: `ends_with()`.
+
+```{r Selecting Date Time and Power columns}
+power <- select(solar, DATE_TIME, DATE, ends_with("POWER"))
+```
+
+### Pivoting
+
+R works best with [tidy data](https://en.wikipedia.org/wiki/Tidy_data). In our case, the data is not "tidy" because the column names contain some of the data (the angles of the various solar panels).
+
+To tidy the data, I want to gather the data in the column headers in its own column. This is done by `gather`ing the columns into more rows using the `gather()` function. This is sometimes known as _long_ format, because it increases the number of rows while reducing the number of columns.
+
+```{r Pivot to long format}
+power$DATE_TIME <- as.POSIXct(power$DATE_TIME)
+power_long <- gather(power, key = "Angle", value = "Power", -DATE_TIME, - DATE)
+```
+
+I am going to clean up the `Angle` column by removing the characters "_" and "POWER" from each of the entries. This can be done more elegantly using regular expressions, but for simplicity I just do a direct character replacement.
+
+```{r Clean Angle Columns}
+power_long$Angle <- gsub("_POWER", "", power_long$Angle, fixed = TRUE)
+power_long$Angle <- gsub("_", " ", power_long$Angle, fixed = TRUE)
+```
+
+### Filtering
+
+Notice that there are `r sum(is.na(power_long$Power))` entries in the `Power` column that have values of `NA`. This is R's way of indicating that a value is missing. I don't want to include these values in my plots below, so I am going to remove them using the `filter()` command. Similar to Python, the exclamation point (!) is used to indicate 'not'.
+
+```{r Filtering out NA values}
+power_long <- filter(power_long, !is.na(Power))
+```
+
+### Aggregating
+
+There are too many points to make a meaningful plot of all of the data, so I want to take the maximum power values on each day. To do this I will use `group_by()` to set the levels that I want R to take for my groups, then I will use the `summarise()` function to summarise over each of those groups. I connect the two functions with the _pipe_ operator ` %>% `, which takes the output of the first and feeds it to the second.
+
+```{r Daily max power}
+power_daily <- group_by(power_long, DATE, Angle) %>% 
+  summarise(Max_Power = max(Power))
+```
+
+
+## Visualizing
+
+```{r Scatter plot time vs power, message=FALSE}
+power_daily$Angle <- factor(power_daily$Angle,
+                            levels = c("90 RIGHT",
+                                       "53 RIGHT",
+                                       "45 RIGHT",
+                                       "27 RIGHT",
+                                       "18 RIGHT",
+                                       "14 RIGHT",
+                                       "14 LEFT",
+                                       "18 LEFT",
+                                       "27 LEFT",
+                                       "45 LEFT",
+                                       "53 LEFT",
+                                       "90 LEFT"),
+                            ordered = TRUE)
+
+p <- ggplot(power_daily, aes(x = DATE, y = Max_Power, colour = Angle)) +
+  geom_point(alpha = 0.1) + 
+  geom_smooth(se = FALSE) +
+  labs(title = "Power Output of Solar Panels on NAIT Roof",
+       subtitle = "PV panels installed on roof of Shaw Theatre, Main Campus",
+       x = NULL,
+       y = "Maximum Daily Power",
+       colour = "Angle of\nSolar Panel",
+       caption = "Data: City of Edmonton Open Data") +
+  theme_minimal()
+plot(p)
+```
+
+
