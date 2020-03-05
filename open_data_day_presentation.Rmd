@@ -105,11 +105,11 @@ library(tidyverse)
 - Data file is too big for GitHub
     - Download from the open data catalogue as a CSV and save to _same directory_
 
-### Question: How does power depend on the date/time?
+### Question: How does power depend on the date?
 
 ### Question: Which angle produces the best power?
 
-- Open `nait_solar.Rmd`
+- Open `solar_eg.Rmd`
 
 ## Mosquito Traps & Rainfall
 
@@ -118,3 +118,5 @@ library(tidyverse)
 - Rainfall measured _daily_
 
 ### Question: How well does mean rainfall predict total mosquitoes caught?
+
+- Open `mosquitoes_eg.Rmd`
