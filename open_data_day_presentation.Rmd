@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = FALSE)
 - Walk-through - __Solar Panels at NAIT__ ~ 25 minutes
     - Reading in Data, Visualizing Data, Reshaping Data
 - Walk-through - __Mosquito Trap Counts__ ~ 25 minutes
-    - Mutating Data, Calculations with Data, Predictive Modelling
+    - Mutating Data, Predictive Modelling
 
 ## R
 

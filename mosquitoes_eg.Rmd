@@ -57,3 +57,37 @@ Now the two data sets are on the same frequency, I can merge them using an _inne
 mosquitoes_w_rain <- inner_join(mosquitoes_per_week, rain_per_week, by = c("Year", "Week"))
 ```
 
+## Predictive Modelling
+
+I want to predict the number of mosquitoes caught in the trap in a given week based on the total rainfall that week and the week of the year. R has many, many ways of doing this, but I will show just two. Before I do, let's take a look at the data:
+
+```{r Visualize with 2d bin}
+
+library(RColorBrewer)
+
+custom_palette = brewer.pal(5, "Reds")[2:5]
+
+p <- ggplot(mosquitoes_w_rain, aes(x = Week, y = Total_Rain, colour = cut_number(Total_Mosquitoes, 4))) +
+  geom_point(size = 2, alpha = 0.9) +
+  scale_color_manual(values = custom_palette,
+                     labels = c("<77","77-218","219-728",">728")) +
+  labs(title = "Mosquitoes Caught in Edmonton",
+       subtitle = "Across all test traps in YEG",
+       x = "Week of the Year",
+       y = "Total Rainfall that Week",
+       colour = "Number of\nMosquitoes Caught",
+       caption = "Data: City of Edmonton Open Data")+
+  theme_minimal()
+
+plot(p)
+```
+
+
+### Polynomial Regression
+
+It is difficult to see any linear relationships in the data above, so instead I will try a polynomial regression. I do this using the `polym()` command to tell R that I want to use not only the original two variables, but their powers and intersections up to a specified degree.
+
+```{r Polynomial Regression}
+mosquito_polyfit <- lm(Total_Mosquitoes ~ poly(Week, Total_Rain, degree = 3), data = mosquitoes_w_rain)
+```
+
