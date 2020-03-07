@@ -34,7 +34,7 @@ knitr::opts_chunk$set(echo = FALSE)
 - ["R is a language and environment for statistical computing and graphics."](https://www.r-project.org/about.html)
 - Created by Ross Ihaka and Robert Gentleman at the University of Auckland (according to Wikipedia)
 - First stable beta version on February 29, 2000 (Happy 5th Birthday!)
-- Free GUI and command-line versions available at [www.r-project.org](www.r-project.org)
+- Free GUI and command-line versions available at [www.r-project.org](http://www.r-project.org)
 
 ## Why R?
 
