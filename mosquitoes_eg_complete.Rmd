@@ -1,0 +1,170 @@
+---
+title: "Mosquito Traps and Rainfall in YEG"
+author: "Alexander Ondrus"
+date: "3/5/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading & Manipulating Data
+
+The two CSV files that we need for this example are the Rainfall Gauge Results and the Mosquitoes Trap Data. I also load the `tidyverse` library as well.
+
+```{r Load libraries and data, message=FALSE, warning=FALSE}
+library(tidyverse)
+mosquito <- read_csv("Mosquitoes_Trap_Data__May_2011_to_Sep_2015_.csv")
+rain <- read_csv("Rainfall_Gauge_Results.csv")
+```
+
+Note that the mosquito data is _weekly_ and the rainfall data is _daily_. That means that I need to aggregate the rainfall data to the same frequency as the mosquito data and then join the two data frames together. Neither date column is immediately recognized as a date, so I use the `lubridate` package to set the format.
+
+```{r Convert to date, message=FALSE, warning=FALSE}
+library(lubridate)
+mosquito$TRAP_DATE <- mdy(mosquito$TRAP_DATE)
+rain$DATE <- mdy(rain$DATE)
+```
+
+The `lubridate` package also has a `week()` function that returns the week of the year for a given date. I will add these columns to both the mosquito and rain data. I also rename the `YEAR` column in the rain data to `Year` to match up with the mosquito data later on.
+
+```{r Add weeks and years}
+mosquito$Year <- year(mosquito$TRAP_DATE)
+mosquito$Week <- week(mosquito$TRAP_DATE)
+
+rain$Week <- week(rain$DATE)
+rain <- rename(rain, Year = YEAR)
+```
+
+To simplify things greatly, I am just going to look at the total rainfall for each week and the total number of mosquitos caught each week. This means that I only need the year, week, and total columns for each data set. Note that the data is spread over multiple rows for each set, so I will need to group and summarise the data as well. To make these commands concise, I will use the pipe operator ` %>% `
+
+```{r Select-group-summarise data}
+mosquitoes_per_week <- select(mosquito, Year, Week, TOTAL) %>% 
+  group_by(Year, Week) %>% 
+  summarise(Total_Mosquitoes = sum(TOTAL, na.rm = TRUE)) %>% 
+  filter(!is.na(Year), !is.na(Week))
+
+rain_per_week <- select(rain, Year, Week, AMOUNT) %>% 
+  group_by(Year, Week) %>% 
+  summarise(Total_Rain = sum(AMOUNT, na.rm = TRUE)) %>% 
+  filter(!is.na(Year), !is.na(Week))
+```
+
+Now the two data sets are on the same frequency, I can merge them using an _inner join_. This means that I only include rows that have matching values in both data frames for the specified columns.
+
+```{r Join the data sets}
+mosquitoes_w_rain <- inner_join(mosquitoes_per_week, rain_per_week, by = c("Year", "Week"))
+```
+
+## Predictive Modelling
+
+I want to predict the number of mosquitoes caught in the trap in a given week based on the total rainfall that week and the week of the year. R has many, many ways of doing this, but I will show just two. Before I do, let's take a look at the data:
+
+```{r Visualize with 2d bin}
+mosquitoes_w_rain <- ungroup(mosquitoes_w_rain) %>% 
+  select(-Year)
+
+library(RColorBrewer)
+custom_palette = brewer.pal(5, "Reds")[2:5]
+
+p <- ggplot(mosquitoes_w_rain, aes(x = Week, y = Total_Rain, colour = cut_number(Total_Mosquitoes, 4))) +
+  geom_point(size = 2, alpha = 0.9) +
+  scale_color_manual(values = custom_palette,
+                     labels = c("<77","77-218","219-728",">728")) +
+  labs(title = "Mosquitoes Caught in Edmonton",
+       subtitle = "Across all test traps in YEG",
+       x = "Week of the Year",
+       y = "Total Rainfall that Week",
+       colour = "Number of\nMosquitoes Caught",
+       caption = "Data: City of Edmonton Open Data")+
+  theme_minimal()
+
+plot(p)
+```
+
+
+### Polynomial Regression
+
+It is difficult to see any linear relationships in the data above, so instead I will try a polynomial regression. I do this using the `polym()` command to tell R that I want to use not only the original two variables, but their powers and intersections up to a specified degree.
+
+```{r Polynomial Regression}
+mosquito_polyfit <- lm(Total_Mosquitoes ~ poly(Week, Total_Rain, degree = 3), data = mosquitoes_w_rain)
+
+test_input <- expand.grid(min(mosquitoes_w_rain$Week):max(mosquitoes_w_rain$Week), (0:60)*100)
+colnames(test_input) <- c("Week", "Total_Rain")
+
+simulated_results <- cbind(test_input, 
+                           predict(mosquito_polyfit,
+                                   newdata = test_input))
+colnames(simulated_results)[3] <- "Total_Mosquitoes"
+
+p1 <- ggplot(simulated_results, aes(x = Week,
+                                    y = Total_Rain,
+                                    fill = cut_number(Total_Mosquitoes, n = 4))) +
+  geom_bin2d(stat = "identity") +
+  scale_fill_manual(values = custom_palette) +
+    labs(title = "Polynomial Regression Fit",
+       subtitle = "Fitting the trap data with a degree 3 polynomial fit",
+       x = "Week of the Year",
+       y = "Total Rainfall that Week",
+       fill = "Number of\nMosquitoes Caught")+
+  theme_minimal()
+plot(p1)
+```
+
+Taking a quick look at the legend values, it is easy to see that the polynomial regression fit does not do well at predicting the data at all.
+
+### Regression Tree
+
+Regression trees segment our predictor space in a manner that minimizes the variation of the output variable and uses the mean of given values to predict the output value in each region. See [here](https://en.wikipedia.org/wiki/Decision_tree_learning) for more details. The R package for building regression (or classification) trees is `tree`.
+
+```{r Building a tree, message=FALSE, warning=FALSE}
+library(tree)
+
+training_rows <- sample(1:nrow(mosquitoes_w_rain), 
+                        floor(nrow(mosquitoes_w_rain)*0.75))
+
+mosquito_tree <- tree(Total_Mosquitoes ~ ., 
+                      mosquitoes_w_rain,
+                      subset = training_rows)
+
+plot(mosquito_tree)
+text(mosquito_tree, pretty = 0)
+```
+
+```{r Testing the tree}
+test_data <- select(mosquitoes_w_rain[-training_rows,], -Total_Mosquitoes)
+test_output <- mosquitoes_w_rain[-training_rows, "Total_Mosquitoes"]
+test_predictions <- predict(mosquito_tree, newdata = test_data)
+tree_mse = mean(unlist((test_predictions - test_output)^2))
+```
+
+This means that the MSE (or *M*ean *S*quared *E*rror), defined by:
+
+$$\mathrm{MSE} = \frac{1}{n} \sum_i \left( y_{\mathrm{predicted}} - y_{\mathrm{actual}} \right)^2 $$
+
+is equal to `r format(round(tree_mse, 0), big.mark = " ")` for our model. Taking the square root of this we can estimate that the model will be off by `r format(round(sqrt(tree_mse),0), big.mark = " ")` mosquitoes. Let's visualize the results in a way similar to linear regression.
+
+```{r Visualizing tree predictions}
+simulated_tree_results <- cbind(test_input, 
+                           predict(mosquito_tree,
+                                   newdata = test_input))
+colnames(simulated_tree_results)[3] <- "Total_Mosquitoes"
+
+p2 <- ggplot(simulated_tree_results, aes(x = Week,
+                                    y = Total_Rain,
+                                    fill = factor(Total_Mosquitoes))) +
+  geom_bin2d(stat = "identity") +
+  scale_fill_brewer(palette = "Reds") +
+    labs(title = "Regression Tree Model",
+       subtitle = "Fitting the trap data with a regression tree",
+       x = "Week of the Year",
+       y = "Total Rainfall that Week",
+       fill = "Number of\nMosquitoes Caught")+
+  theme_minimal()
+plot(p2)
+```
+
