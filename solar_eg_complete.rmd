@@ -94,7 +94,12 @@ To tidy the data, I want to gather the data in the column headers in its own col
 
 ```{r Pivot to long format}
 power$DATE_TIME <- as.POSIXct(power$DATE_TIME)
-power_long <- gather(power, key = "Angle", value = "Power", -DATE_TIME, - DATE)
+power_long <- pivot_longer(
+  power, 
+  -c(DATE_TIME, DATE),
+  names_to = "Angle", 
+  values_to = "Power"
+)
 ```
 
 I am going to clean up the `Angle` column by removing the characters "_" and "POWER" from each of the entries. This can be done more elegantly using regular expressions, but for simplicity I just do a direct character replacement.
