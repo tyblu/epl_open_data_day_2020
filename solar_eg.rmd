@@ -89,7 +89,7 @@ For simplicity, I am going to look at only the columns that deal with power. I c
 
 R works best with [tidy data](https://en.wikipedia.org/wiki/Tidy_data). In our case, the data is not "tidy" because the column names contain some of the data (the angles of the various solar panels).
 
-To tidy the data, I want to gather the data in the column headers in its own column. This is done by `gather`ing the columns into more rows using the `gather()` function. This is sometimes known as _long_ format, because it increases the number of rows while reducing the number of columns.
+To tidy the data, I want to gather the data in the column headers in its own column. This is done by pivoting the columns into more rows using the `pivot_longer()` function (used to use now depreciated `gather()` function). This is sometimes known as _long_ format, because it increases the number of rows while reducing the number of columns.
 
 ```{r Pivot to long format}
 
