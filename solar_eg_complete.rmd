@@ -45,7 +45,7 @@ if ( !file.exists(solarFilename) )
 
 ## Loading the Data
 
-First, I load the `tidyverse` library and read the downloaded CSV file using the `read_csv()` command. As long as the csv is stored in the same directory as this file, you can use tab-autocomplete to find the file quickly.
+First, I load the `tidyverse` library and read the downloaded CSV file using the `read_csv()` command. As long as the csv is stored in the current RStudio working directory (click `Session`, `Set Working Directory`), you can use tab-autocomplete to find the file quickly.
 
 The notation `<-` to store the result of a command in another variable can be used interchangably with `=`.
 
