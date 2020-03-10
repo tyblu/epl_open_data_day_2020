@@ -10,6 +10,37 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(tcltk)
+solarFilename <- "Historical_-_City_of_Edmonton_NAIT_Solar_Panel_Reference_System.csv"
+if ( !file.exists(solarFilename) )
+{ 
+  msg <- paste(
+    "Missing CSV data. ",
+    "Click \'OK\' to download to working directory, \'Cancel\' to skip.",
+    sep="")
+  msgBox <- tk_messageBox(title = "Waiting for download...",
+                          message = msg, icon = "info", type = "okcancel")
+  if( identical(msgBox, "ok") )
+  {
+    download.file(
+      "https://data.edmonton.ca/api/views/uwuq-3zq3/rows.csv?accessType=DOWNLOAD",
+      destfile = solarFilename,
+      method = "auto"
+    )
+#    browseURL("https://data.edmonton.ca/Environmental-Services/Historical-City-of-Edmonton-NAIT-Solar-Panel-Refer/uwuq-3zq3")
+  }
+}
+if ( !file.exists(solarFilename) )
+{
+  msg <- paste(
+    "CSV data file not detected.",
+    "Please ensure working directory is set correctly before proceeding. ",
+    "It is currently: \n",
+    getwd(),
+    sep=""
+  )
+  msgBox <- tk_messageBox(title = "Error", message = msg, icon = "info", type = "ok")
+}
 ```
 
 ## Loading the Data
